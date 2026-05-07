@@ -1,5 +1,7 @@
 package com.example.bank.service;
 
+import com.example.bank.dto.AccountResponse;
+import com.example.bank.dto.CreateAccountRequest;
 import com.example.bank.dto.CreditRequest;
 import com.example.bank.dto.DebitRequest;
 import com.example.bank.entity.Account;
@@ -7,68 +9,105 @@ import com.example.bank.entity.LedgerEntry;
 import com.example.bank.exception.ApplicationException;
 import com.example.bank.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class AccountService {
     private final AccountRepository accountRepository;
     private final LedgerService ledgerService;
+    private final ExternalLoggingService externalLoggingService;
 
-    public Account createAccount(Account account) {
-        if (accountRepository.existsByUsername(account.getUsername())) {
+    public AccountResponse createAccount(CreateAccountRequest createAccountRequest) {
+        if (accountRepository.existsByUsername(createAccountRequest.getUsername())) {
             throw new ApplicationException("Username already exists");
         }
-        return accountRepository.save(account);
+        Account account = new Account();
+        account.setUsername(createAccountRequest.getUsername());
+        account.setAccountNumber(generateAccountNumber());
+        Account savedAccount = accountRepository.save(account);
+
+        return new AccountResponse(
+                savedAccount.getAccountNumber(),
+                savedAccount.getUsername()
+        );
     }
 
-    public void creditAccount(Long accountId, CreditRequest request) {
-        if (!accountRepository.existsById(accountId)) {
-            throw new ApplicationException("Account not found");
-        }
-        ledgerService.credit(accountId, request);
+    private String generateAccountNumber() {
+        String randomPart = UUID.randomUUID()
+                .toString()
+                .replace("-", "")
+                .substring(0, 8)
+                .toUpperCase();
+
+        return "ACC-" + randomPart;
+    }
+
+    public void creditAccount(String accountNumber, CreditRequest request) {
+        Account account = getAccountByAccountNumber(accountNumber);
+        ledgerService.credit(account.getId(), request);
+    }
+
+    public void debitAccount(String accountNumber, DebitRequest request) {
+        Account account = getAccountByAccountNumber(accountNumber);
+        externalLoggingService.logDebit();
+        ledgerService.debit(account.getId(), request);
 
     }
 
-    public void debitAccount(Long accountId, DebitRequest request) {
-        if (!accountRepository.existsById(accountId)) {
-            throw new ApplicationException("Account not found");
-        }
-        //todo make api request
-        ledgerService.debit(accountId, request);
-
-    }
-
-    public Map<LedgerEntry.CurrencyCode, BigDecimal> getBalances(Long accountId, LedgerEntry.CurrencyCode currency) {
-        if (!accountRepository.existsById(accountId)) {
-            throw new ApplicationException("Account not found");
-        }
+    public Map<LedgerEntry.CurrencyCode, BigDecimal> getBalances(String accountNumber, LedgerEntry.CurrencyCode currency) {
+        Account account = getAccountByAccountNumber(accountNumber);
         Map<LedgerEntry.CurrencyCode, BigDecimal> balances;
 
         if (currency != null) {
             balances = Map.of(
                     currency,
-                    ledgerService.getBalance(accountId, currency)
+                    ledgerService.getBalance(account.getId(), currency)
             );
         } else {
-            balances = ledgerService.getAllBalances(accountId);
+            balances = ledgerService.getAllBalances(account.getId());
         }
         return balances;
 
     }
 
-    private void currency() {
-    //todo
+    private Account getAccountByAccountNumber(String accountNumber) {
+        return accountRepository
+                .findAccountByAccountNumber(accountNumber)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Account not found"
+                        )
+                );
     }
 
-    public void validateOwnership(Long accountId, String username) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ApplicationException("Account not found"));
+
+    private void currency() {
+        //todo
+    }
+
+    public void validateOwnership(String accountNumber, String username) {
+        Account account = accountRepository
+                .findAccountByAccountNumber(accountNumber)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Account not found"
+                        )
+                );
+
         if (!account.getUsername().equals(username)) {
-            throw new ApplicationException("Unauthorized");
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "You do not own this account"
+            );
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.example.bank.controller;
 
+import com.example.bank.dto.AccountResponse;
+import com.example.bank.dto.CreateAccountRequest;
 import com.example.bank.dto.CreditRequest;
 import com.example.bank.dto.DebitRequest;
 import com.example.bank.entity.Account;
@@ -29,37 +31,37 @@ public class AccountController {
     ;
 
     @PostMapping
-    public ResponseEntity<Account> createAccount(@Valid @RequestBody Account account) {
-        Account createdAccount = accountService.createAccount(account);
+    public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest createAccountRequest) {
+        AccountResponse createdAccount = accountService.createAccount(createAccountRequest);
         return ResponseEntity.status(HttpStatus.CREATED).body(createdAccount);
     }
 
-    @PostMapping("/{id}/credit")
-    public ResponseEntity<Void> creditAccount(@PathVariable("id") Long accountId,
+    @PostMapping("/{accountNumber}/credit")
+    public ResponseEntity<Void> creditAccount(@PathVariable("accountNumber") String accountNumber,
                                               @RequestHeader("X-Username") String username,
                                               @Valid @RequestBody CreditRequest request) {
-        accountService.validateOwnership(accountId, username);
-        accountService.creditAccount(accountId, request);
+        accountService.validateOwnership(accountNumber, username);
+        accountService.creditAccount(accountNumber, request);
         return ResponseEntity.noContent().build();
     }
 
-    @PostMapping("/{id}/debit")
-    public ResponseEntity<Void> debitAccount(@PathVariable("id") Long accountId,
+    @PostMapping("/{accountNumber}/debit")
+    public ResponseEntity<Void> debitAccount(@PathVariable("accountNumber") String accountNumber,
                                              @RequestHeader("X-Username") String username,
                                              @Valid @RequestBody DebitRequest request) {
-        accountService.validateOwnership(accountId, username);
-        accountService.debitAccount(accountId, request);
+        accountService.validateOwnership(accountNumber, username);
+        accountService.debitAccount(accountNumber, request);
         return ResponseEntity.noContent().build();
     }
 
-    @GetMapping("/{id}/balance")
+    @GetMapping("/{accountNumber}/balance")
     public ResponseEntity<Map<LedgerEntry.CurrencyCode, BigDecimal>> getAccountBalance(
-            @PathVariable("id") Long accountId,
+            @PathVariable("accountNumber") String accountNumber,
             @RequestHeader("X-Username") String username,
             @RequestParam(required = false) LedgerEntry.CurrencyCode currency
     ) {
-        accountService.validateOwnership(accountId, username);
-        Map<LedgerEntry.CurrencyCode, BigDecimal> balances = accountService.getBalances(accountId, currency);
+        accountService.validateOwnership(accountNumber, username);
+        Map<LedgerEntry.CurrencyCode, BigDecimal> balances = accountService.getBalances(accountNumber, currency);
         return ResponseEntity.ok(balances);
     }
 }
