@@ -23,8 +23,7 @@ public class LedgerEntry {
 
     private Long accountId;
 
-    @Enumerated(EnumType.STRING)
-    private CurrencyCode currency;
+    private String currency;
 
     private BigDecimal amount; // positive
 
@@ -34,10 +33,6 @@ public class LedgerEntry {
     private String referenceId; // for idempotency
 
     private Instant createdAt = Instant.now();
-
-    public enum CurrencyCode {
-        EUR, USD, GBP //todo make better
-    }
 
     public enum LedgerEntryType {
         CREDIT,

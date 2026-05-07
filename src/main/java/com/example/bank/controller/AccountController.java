@@ -4,8 +4,7 @@ import com.example.bank.dto.AccountResponse;
 import com.example.bank.dto.CreateAccountRequest;
 import com.example.bank.dto.CreditRequest;
 import com.example.bank.dto.DebitRequest;
-import com.example.bank.entity.Account;
-import com.example.bank.entity.LedgerEntry;
+import com.example.bank.dto.ExchangeRequest;
 import com.example.bank.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,13 +54,22 @@ public class AccountController {
     }
 
     @GetMapping("/{accountNumber}/balance")
-    public ResponseEntity<Map<LedgerEntry.CurrencyCode, BigDecimal>> getAccountBalance(
+    public ResponseEntity<Map<String, BigDecimal>> getAccountBalance(
             @PathVariable("accountNumber") String accountNumber,
             @RequestHeader("X-Username") String username,
-            @RequestParam(required = false) LedgerEntry.CurrencyCode currency
-    ) {
+            @RequestParam(required = false) String currency) {
         accountService.validateOwnership(accountNumber, username);
-        Map<LedgerEntry.CurrencyCode, BigDecimal> balances = accountService.getBalances(accountNumber, currency);
+        Map<String, BigDecimal> balances = accountService.getBalances(accountNumber, currency);
         return ResponseEntity.ok(balances);
+    }
+
+    @PostMapping("/{accountNumber}/exchange")
+    public ResponseEntity<Void> exchangeCurrency(
+            @PathVariable("accountNumber") String accountNumber,
+            @RequestHeader("X-Username") String username,
+            @Valid @RequestBody ExchangeRequest exchangeRequest) {
+        accountService.validateOwnership(accountNumber, username);
+        accountService.exchangeCurrency(accountNumber, exchangeRequest);
+        return ResponseEntity.noContent().build();
     }
 }

@@ -13,19 +13,19 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
     boolean existsByReferenceId(String referenceId);
 
     @Query("""
-           SELECT COALESCE(SUM(
-               CASE
-                   WHEN le.type = 'CREDIT' THEN le.amount
-                   ELSE -le.amount
-               END
-           ), 0)
-           FROM LedgerEntry le
-           WHERE le.accountId = :accountId
-           AND le.currency = :currency
-           """)
+            SELECT COALESCE(SUM(
+                CASE
+                    WHEN le.type = 'CREDIT' THEN le.amount
+                    ELSE -le.amount
+                END
+            ), 0)
+            FROM LedgerEntry le
+            WHERE le.accountId = :accountId
+            AND le.currency = :currency
+            """)
     BigDecimal sumAmountByAccountIdAndCurrency(
             @Param("accountId") Long accountId,
-            @Param("currency") LedgerEntry.CurrencyCode currency
+            @Param("currency") String currency
     );
 
     @Query("""

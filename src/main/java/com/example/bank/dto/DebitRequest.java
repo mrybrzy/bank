@@ -1,6 +1,5 @@
 package com.example.bank.dto;
 
-import com.example.bank.entity.LedgerEntry;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -17,8 +16,12 @@ public class DebitRequest {
     @DecimalMin("0.01")
     private BigDecimal amount;
 
-    @NotNull
-    private LedgerEntry.CurrencyCode currency;
+    @NotBlank
+    @Pattern(
+            regexp = "^[A-Z]{3}$",
+            message = "Currency must be ISO 3-letter code"
+    )
+    private String currency;
 
     @NotBlank
     @Pattern(

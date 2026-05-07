@@ -11,7 +11,8 @@ import java.math.BigDecimal;
 
 @Getter
 @Setter
-public class CreditRequest {
+public class ExchangeRequest {
+
     @NotNull
     @DecimalMin(value = "0.01", inclusive = true)
     private BigDecimal amount;
@@ -21,13 +22,19 @@ public class CreditRequest {
             regexp = "^[A-Z]{3}$",
             message = "Currency must be ISO 3-letter code"
     )
-    private String currency;
+    private String fromCurrency;
+
+    @NotBlank
+    @Pattern(
+            regexp = "^[A-Z]{3}$",
+            message = "Currency must be ISO 3-letter code"
+    )
+    private String toCurrency;
 
     @NotBlank
     @Pattern(
             regexp = "^[0-9a-fA-F-]{36}$",
             message = "Invalid UUID format"
     )
-    private String referenceId; // pattern and String, so in case not valid UUID it will be said in response
-
+    private String referenceId;
 }
