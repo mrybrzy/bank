@@ -6,7 +6,6 @@ import com.example.bank.dto.CreditRequest;
 import com.example.bank.dto.DebitRequest;
 import com.example.bank.dto.ExchangeRequest;
 import com.example.bank.service.AccountService;
-import com.example.bank.service.ExternalLoggingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -29,7 +28,7 @@ import java.util.Map;
 public class AccountController {
     private final AccountService accountService;
     private static final String USERNAME_HEADER = "X-Username";
-    private final ExternalLoggingService externalLoggingService;
+
     @PostMapping
     public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest createAccountRequest) {
         AccountResponse createdAccount = accountService.createAccount(createAccountRequest);
@@ -51,7 +50,6 @@ public class AccountController {
                                              @Valid @RequestBody DebitRequest request) {
         accountService.validateOwnership(accountNumber, username);
         accountService.debitAccount(accountNumber, request);
-        externalLoggingService.logDebit();
         return ResponseEntity.noContent().build();
     }
 

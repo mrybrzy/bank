@@ -11,6 +11,7 @@ import com.example.bank.repository.LedgerEntryRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -36,7 +37,7 @@ public class LedgerService {
         validatePositiveAmount(request.getAmount());
         boolean hasSufficientFunds = getBalance(accountId, request.getCurrency()).compareTo(request.getAmount()) >= 0;
         if (!hasSufficientFunds) {
-            throw new ApplicationException("Insufficient funds");
+            throw new ApplicationException("Insufficient funds", HttpStatus.UNPROCESSABLE_ENTITY);
         }
         registerOperation(request.getReferenceId(), BankOperation.OperationType.DEBIT);
         createDebitEntry(accountId, request.getCurrency(), request.getAmount(), request.getReferenceId());
@@ -62,7 +63,7 @@ public class LedgerService {
         boolean hasSufficientFunds = getBalance(accountId, request.getFromCurrency()).compareTo(request.getAmount()) >= 0;
 
         if (!hasSufficientFunds) {
-            throw new ApplicationException("Insufficient funds");
+            throw new ApplicationException("Insufficient funds", HttpStatus.UNPROCESSABLE_ENTITY);
         }
         createDebitEntry(accountId, request.getFromCurrency(), request.getAmount(), request.getReferenceId());
         registerOperation(request.getReferenceId(), BankOperation.OperationType.EXCHANGE);
@@ -76,10 +77,6 @@ public class LedgerService {
     }
 
     private void registerOperation(String referenceId, BankOperation.OperationType type) {
-        if (bankOperationRepository.existsByReferenceId(referenceId)) {
-            throw new ApplicationException("Duplicate reference ID");
-        }
-
         BankOperation operation = new BankOperation();
         operation.setReferenceId(referenceId);
         operation.setType(type);
@@ -87,7 +84,7 @@ public class LedgerService {
         try {
             bankOperationRepository.saveAndFlush(operation);
         } catch (DataIntegrityViolationException ex) {
-            throw new ApplicationException("Duplicate reference ID");
+            throw new ApplicationException("Duplicate reference ID", HttpStatus.CONFLICT);
         }
     }
 
