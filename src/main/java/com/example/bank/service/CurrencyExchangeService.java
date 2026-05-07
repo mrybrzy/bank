@@ -12,19 +12,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CurrencyExchangeService {
     private static final Map<String, BigDecimal>
-            EXCHANGE_RATES = Map.ofEntries(
-            Map.entry("EUR", BigDecimal.valueOf(1.0)),
-            Map.entry("USD", BigDecimal.valueOf(1.08)),
-            Map.entry("SEK", BigDecimal.valueOf(11.5)),
-            Map.entry("GBP", BigDecimal.valueOf(0.86)),
-            Map.entry("JPY", BigDecimal.valueOf(169.2)),
-            Map.entry("CHF", BigDecimal.valueOf(0.94)),
-            Map.entry("NOK", BigDecimal.valueOf(11.8)),
-            Map.entry("DKK", BigDecimal.valueOf(7.46)),
-            Map.entry("PLN", BigDecimal.valueOf(4.29)),
-            Map.entry("CAD", BigDecimal.valueOf(1.47)),
-            Map.entry("AUD", BigDecimal.valueOf(1.64)),
-            Map.entry("CNY", BigDecimal.valueOf(7.82))
+            EXCHANGE_RATES = Map.of(
+            "EUR", BigDecimal.ONE,
+            "USD", BigDecimal.valueOf(1.08),
+            "SEK", BigDecimal.valueOf(11.5),
+            "GBP", BigDecimal.valueOf(0.86)
     );
 
     public void validateCurrency(String currency) {
@@ -40,7 +32,7 @@ public class CurrencyExchangeService {
         BigDecimal fromRate = EXCHANGE_RATES.get(fromCurrency);
         BigDecimal toRate = EXCHANGE_RATES.get(toCurrency);
 
-        BigDecimal eurAmount = amount.divide(fromRate, 2, BigDecimal.ROUND_HALF_UP);
+        BigDecimal eurAmount = amount.divide(fromRate, 2, RoundingMode.HALF_UP);
         return eurAmount.multiply(toRate).setScale(2, RoundingMode.HALF_UP);
 
     }

@@ -1,5 +1,6 @@
 package com.example.bank.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -21,15 +22,20 @@ public class LedgerEntry {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private Long accountId;
 
+    @Column(nullable = false, length = 3)
     private String currency;
 
+    @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal amount; // positive
 
+    @Column(nullable = false)
     @Enumerated(EnumType.STRING)
     private LedgerEntryType type;
 
+    @Column(nullable = false)
     private String referenceId; // for idempotency
 
     private Instant createdAt = Instant.now();

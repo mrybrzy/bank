@@ -6,6 +6,7 @@ import com.example.bank.dto.CreditRequest;
 import com.example.bank.dto.DebitRequest;
 import com.example.bank.dto.ExchangeRequest;
 import com.example.bank.service.AccountService;
+import com.example.bank.service.ExternalLoggingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -27,8 +28,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AccountController {
     private final AccountService accountService;
-    ;
-
+    private static final String USERNAME_HEADER = "X-Username";
+    private final ExternalLoggingService externalLoggingService;
     @PostMapping
     public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest createAccountRequest) {
         AccountResponse createdAccount = accountService.createAccount(createAccountRequest);
@@ -37,7 +38,7 @@ public class AccountController {
 
     @PostMapping("/{accountNumber}/credit")
     public ResponseEntity<Void> creditAccount(@PathVariable("accountNumber") String accountNumber,
-                                              @RequestHeader("X-Username") String username,
+                                              @RequestHeader(USERNAME_HEADER) String username,
                                               @Valid @RequestBody CreditRequest request) {
         accountService.validateOwnership(accountNumber, username);
         accountService.creditAccount(accountNumber, request);
@@ -46,17 +47,18 @@ public class AccountController {
 
     @PostMapping("/{accountNumber}/debit")
     public ResponseEntity<Void> debitAccount(@PathVariable("accountNumber") String accountNumber,
-                                             @RequestHeader("X-Username") String username,
+                                             @RequestHeader(USERNAME_HEADER) String username,
                                              @Valid @RequestBody DebitRequest request) {
         accountService.validateOwnership(accountNumber, username);
         accountService.debitAccount(accountNumber, request);
+        externalLoggingService.logDebit();
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{accountNumber}/balance")
     public ResponseEntity<Map<String, BigDecimal>> getAccountBalance(
             @PathVariable("accountNumber") String accountNumber,
-            @RequestHeader("X-Username") String username,
+            @RequestHeader(USERNAME_HEADER) String username,
             @RequestParam(required = false) String currency) {
         accountService.validateOwnership(accountNumber, username);
         Map<String, BigDecimal> balances = accountService.getBalances(accountNumber, currency);
@@ -66,7 +68,7 @@ public class AccountController {
     @PostMapping("/{accountNumber}/exchange")
     public ResponseEntity<Void> exchangeCurrency(
             @PathVariable("accountNumber") String accountNumber,
-            @RequestHeader("X-Username") String username,
+            @RequestHeader(USERNAME_HEADER) String username,
             @Valid @RequestBody ExchangeRequest exchangeRequest) {
         accountService.validateOwnership(accountNumber, username);
         accountService.exchangeCurrency(accountNumber, exchangeRequest);

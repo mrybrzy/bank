@@ -18,16 +18,17 @@ public class Account {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long Id;
+    private Long id;
 
     @Column(unique = true, nullable = false)
     private String accountNumber;
 
     @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 10, message = "Username must be 3–10 characters")
+    @Size(min = 3, max = 10, message = "Username must be 3-10 characters")
     @Pattern(
             regexp = "^[a-zA-Z0-9_]+$",
             message = "Username can only contain letters, numbers, and underscores"
     )
+    @Column(unique = true, nullable = false)
     private String username;
 }
