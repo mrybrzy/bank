@@ -9,14 +9,10 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.util.UUID;
 
 @Getter
 @Setter
 public class CreditRequest {
-    @NotNull
-    private Long accountId;
-
     @NotNull
     @DecimalMin(value = "0.01", inclusive = true)
     private BigDecimal amount;

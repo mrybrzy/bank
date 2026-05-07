@@ -13,10 +13,6 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 public class DebitRequest {
-
-    @NotNull
-    private Long accountId;
-
     @NotNull
     @DecimalMin("0.01")
     private BigDecimal amount;
