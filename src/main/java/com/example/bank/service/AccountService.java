@@ -11,6 +11,7 @@ import com.example.bank.repository.AccountRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -22,7 +23,6 @@ import java.util.UUID;
 public class AccountService {
     private final AccountRepository accountRepository;
     private final LedgerService ledgerService;
-    private final ExternalLoggingService externalLoggingService;
     private final CurrencyExchangeService currencyExchangeService;
 
     public AccountResponse createAccount(CreateAccountRequest createAccountRequest) {
@@ -40,16 +40,17 @@ public class AccountService {
         );
     }
 
+    @Transactional
     public void creditAccount(String accountNumber, CreditRequest request) {
-        Account account = getAccountByAccountNumber(accountNumber);
         currencyExchangeService.validateCurrency(request.getCurrency());
+        Account account = getAccountByAccountNumberForUpdate(accountNumber);
         ledgerService.credit(account.getId(), request);
     }
 
+    @Transactional
     public void debitAccount(String accountNumber, DebitRequest request) {
-        Account account = getAccountByAccountNumber(accountNumber);
         currencyExchangeService.validateCurrency(request.getCurrency());
-        externalLoggingService.logDebit();
+        Account account = getAccountByAccountNumberForUpdate(accountNumber);
         ledgerService.debit(account.getId(), request);
 
     }
@@ -89,13 +90,14 @@ public class AccountService {
         }
     }
 
+    @Transactional
     public void exchangeCurrency(String accountNumber, ExchangeRequest exchangeRequest) {
-        Account account = getAccountByAccountNumber(accountNumber);
         BigDecimal convertedAmount = currencyExchangeService.convert(
                 exchangeRequest.getAmount(),
                 exchangeRequest.getFromCurrency(),
                 exchangeRequest.getToCurrency()
         );
+        Account account = getAccountByAccountNumberForUpdate(accountNumber);
         ledgerService.exchangeCurrency(account.getId(), exchangeRequest, convertedAmount);
     }
 
@@ -112,6 +114,17 @@ public class AccountService {
     private Account getAccountByAccountNumber(String accountNumber) {
         return accountRepository
                 .findAccountByAccountNumber(accountNumber)
+                .orElseThrow(() ->
+                        new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
+                                "Account not found"
+                        )
+                );
+    }
+
+    private Account getAccountByAccountNumberForUpdate(String accountNumber) {
+        return accountRepository
+                .findAccountByAccountNumberForUpdate(accountNumber)
                 .orElseThrow(() ->
                         new ResponseStatusException(
                                 HttpStatus.NOT_FOUND,

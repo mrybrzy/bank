@@ -3,11 +3,14 @@ package com.example.bank.service;
 import com.example.bank.dto.CreditRequest;
 import com.example.bank.dto.DebitRequest;
 import com.example.bank.dto.ExchangeRequest;
+import com.example.bank.entity.BankOperation;
 import com.example.bank.entity.LedgerEntry;
 import com.example.bank.exception.ApplicationException;
+import com.example.bank.repository.BankOperationRepository;
 import com.example.bank.repository.LedgerEntryRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -20,27 +23,22 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LedgerService {
     private final LedgerEntryRepository ledgerEntryRepository;
+    private final BankOperationRepository bankOperationRepository;
 
 
-    public void credit(Long accountId, CreditRequest request) { // panen raha peale
-        if (ledgerEntryRepository.existsByReferenceId(request.getReferenceId())) {
-            throw new ApplicationException("Duplicate reference ID");
-        }
-        if (request.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new ApplicationException("Amount must be positive");
-        }
+    public void credit(Long accountId, CreditRequest request) {
+        validatePositiveAmount(request.getAmount());
+        registerOperation(request.getReferenceId(), BankOperation.OperationType.CREDIT);
         createCreditEntry(accountId, request.getCurrency(), request.getAmount(), request.getReferenceId());
     }
 
-    public void debit(Long accountId, DebitRequest request) { // votan raha valja
-        if (ledgerEntryRepository.existsByReferenceId(request.getReferenceId())) {
-            throw new ApplicationException("Duplicate reference ID");
-        }
-
+    public void debit(Long accountId, DebitRequest request) {
+        validatePositiveAmount(request.getAmount());
         boolean hasSufficientFunds = getBalance(accountId, request.getCurrency()).compareTo(request.getAmount()) >= 0;
         if (!hasSufficientFunds) {
             throw new ApplicationException("Insufficient funds");
         }
+        registerOperation(request.getReferenceId(), BankOperation.OperationType.DEBIT);
         createDebitEntry(accountId, request.getCurrency(), request.getAmount(), request.getReferenceId());
     }
 
@@ -60,16 +58,37 @@ public class LedgerService {
     }
 
     public void exchangeCurrency(Long accountId, ExchangeRequest request, BigDecimal convertedAmount) {
-        if (ledgerEntryRepository.existsByReferenceId(request.getReferenceId())) {
-            throw new ApplicationException("Duplicate reference ID");
-        }
+        validatePositiveAmount(request.getAmount());
         boolean hasSufficientFunds = getBalance(accountId, request.getFromCurrency()).compareTo(request.getAmount()) >= 0;
 
         if (!hasSufficientFunds) {
             throw new ApplicationException("Insufficient funds");
         }
         createDebitEntry(accountId, request.getFromCurrency(), request.getAmount(), request.getReferenceId());
+        registerOperation(request.getReferenceId(), BankOperation.OperationType.EXCHANGE);
         createCreditEntry(accountId, request.getToCurrency(), convertedAmount, request.getReferenceId());
+    }
+
+    private void validatePositiveAmount(BigDecimal amount) {
+        if (amount.compareTo(BigDecimal.ZERO) <= 0) {
+            throw new ApplicationException("Amount must be positive");
+        }
+    }
+
+    private void registerOperation(String referenceId, BankOperation.OperationType type) {
+        if (bankOperationRepository.existsByReferenceId(referenceId)) {
+            throw new ApplicationException("Duplicate reference ID");
+        }
+
+        BankOperation operation = new BankOperation();
+        operation.setReferenceId(referenceId);
+        operation.setType(type);
+
+        try {
+            bankOperationRepository.saveAndFlush(operation);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ApplicationException("Duplicate reference ID");
+        }
     }
 
     private void createCreditEntry(Long accountId, String currency, BigDecimal amount, String referenceId) {

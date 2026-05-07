@@ -7,11 +7,8 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.Map;
 
 public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> {
-    boolean existsByReferenceId(String referenceId);
-
     @Query("""
             SELECT COALESCE(SUM(
                 CASE
@@ -40,4 +37,5 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
        WHERE le.accountId = :accountId
        GROUP BY le.currency
        """)
-    List<Object[]> sumAmountByAccountId(@Param("accountId") Long accountId);}
+    List<Object[]> sumAmountByAccountId(@Param("accountId") Long accountId);
+}
