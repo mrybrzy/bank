@@ -24,7 +24,6 @@ public class AccountService {
     private final AccountRepository accountRepository;
     private final LedgerService ledgerService;
     private final CurrencyExchangeService currencyExchangeService;
-    private final ExternalLoggingService externalLoggingService;
 
     public AccountResponse createAccount(CreateAccountRequest createAccountRequest) {
         if (accountRepository.existsByUsername(createAccountRequest.getUsername())) {
@@ -53,8 +52,6 @@ public class AccountService {
         currencyExchangeService.validateCurrency(request.getCurrency());
         Account account = getAccountByAccountNumberForUpdate(accountNumber);
         ledgerService.debit(account.getId(), request);
-        externalLoggingService.logDebit();
-
     }
 
     public Map<String, BigDecimal> getBalances(String accountNumber, String currency) {
