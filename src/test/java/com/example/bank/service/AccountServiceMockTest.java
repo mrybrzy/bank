@@ -2,6 +2,7 @@ package com.example.bank.service;
 
 import com.example.bank.dto.DebitRequest;
 import com.example.bank.entity.Account;
+import com.example.bank.exception.ApplicationException;
 import com.example.bank.repository.AccountRepository;
 import org.junit.jupiter.api.Test;
 import org.mockito.InOrder;
@@ -9,8 +10,10 @@ import org.mockito.InOrder;
 import java.math.BigDecimal;
 import java.util.Optional;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class AccountServiceMockTest {
@@ -37,7 +40,18 @@ class AccountServiceMockTest {
         InOrder inOrder = inOrder(currencyExchangeService, accountRepository, ledgerService);
         inOrder.verify(currencyExchangeService).validateCurrency("EUR");
         inOrder.verify(accountRepository).findAccountByAccountNumberForUpdate(ACCOUNT_NUMBER);
-        inOrder.verify(ledgerService).debit(1L, request);
+        inOrder.verify(ledgerService).debit(account, request);
+    }
+
+    @Test
+    void debitRejectsReferenceIdThatMatchesRegexButCannotBeParsedAsUuid() {
+        DebitRequest request = debitRequest("11111111-1111-1111-1111-11111111111-");
+
+        assertThatThrownBy(() -> accountService.debitAccount(ACCOUNT_NUMBER, request))
+                .isInstanceOf(ApplicationException.class)
+                .hasMessage("Invalid UUID format");
+
+        verifyNoInteractions(currencyExchangeService, accountRepository, ledgerService);
     }
 
     private static Account account() {

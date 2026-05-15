@@ -42,16 +42,18 @@ public class AccountService {
 
     @Transactional
     public void creditAccount(String accountNumber, CreditRequest request) {
+        validateReferenceId(request.getReferenceId());
         currencyExchangeService.validateCurrency(request.getCurrency());
         Account account = getAccountByAccountNumberForUpdate(accountNumber);
-        ledgerService.credit(account.getId(), request);
+        ledgerService.credit(account, request);
     }
 
     @Transactional
     public void debitAccount(String accountNumber, DebitRequest request) {
+        validateReferenceId(request.getReferenceId());
         currencyExchangeService.validateCurrency(request.getCurrency());
         Account account = getAccountByAccountNumberForUpdate(accountNumber);
-        ledgerService.debit(account.getId(), request);
+        ledgerService.debit(account, request);
     }
 
     public Map<String, BigDecimal> getBalances(String accountNumber, String currency) {
@@ -91,13 +93,22 @@ public class AccountService {
 
     @Transactional
     public void exchangeCurrency(String accountNumber, ExchangeRequest exchangeRequest) {
+        validateReferenceId(exchangeRequest.getReferenceId());
         BigDecimal convertedAmount = currencyExchangeService.convert(
                 exchangeRequest.getAmount(),
                 exchangeRequest.getFromCurrency(),
                 exchangeRequest.getToCurrency()
         );
         Account account = getAccountByAccountNumberForUpdate(accountNumber);
-        ledgerService.exchangeCurrency(account.getId(), exchangeRequest, convertedAmount);
+        ledgerService.exchangeCurrency(account, exchangeRequest, convertedAmount);
+    }
+
+    private void validateReferenceId(String referenceId) {
+        try {
+            UUID.fromString(referenceId);
+        } catch (IllegalArgumentException | NullPointerException ex) {
+            throw new ApplicationException("Invalid UUID format");
+        }
     }
 
     private String generateAccountNumber() {

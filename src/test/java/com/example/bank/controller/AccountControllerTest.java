@@ -75,20 +75,6 @@ class AccountControllerTest {
     }
 
     @Test
-    void creditRejectsReferenceIdThatMatchesRegexButCannotBeParsedAsUuid() throws Exception {
-        mockMvc.perform(post("/accounts/ACC-12345678/credit")
-                        .header("X-Username", USERNAME)
-                        .contentType("application/json")
-                        .content("""
-                                {"amount":10,"currency":"EUR","referenceId":"11111111-1111-1111-1111-11111111111-"}
-                                """))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.referenceId").value("Invalid UUID format"));
-
-        verifyNoInteractions(accountService);
-    }
-
-    @Test
     void balanceMapsOwnershipFailureToForbidden() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this account"))
                 .when(accountService).validateOwnership(ACCOUNT_NUMBER, "bob");
