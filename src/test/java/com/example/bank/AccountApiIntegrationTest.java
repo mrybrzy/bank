@@ -121,7 +121,7 @@ class AccountApiIntegrationTest {
     }
 
     @Test
-    void duplicateDebitReferenceDoesNotCallExternalLoggingAgain() throws Exception {
+    void duplicateDebitReferenceCallsExternalLoggingAgainBeforeConflict() throws Exception {
         String accountNumber = createAccount("alice");
 
         mockMvc.perform(post("/accounts/{accountNumber}/credit", accountNumber)
@@ -150,7 +150,7 @@ class AccountApiIntegrationTest {
                 .andExpect(jsonPath("$.error").value("Duplicate reference ID"));
 
         assertThat(getBalances(accountNumber).get("EUR")).isEqualByComparingTo("90.00");
-        verify(externalLoggingService, times(1)).logDebit();
+        verify(externalLoggingService, times(2)).logDebit();
     }
 
     @Test

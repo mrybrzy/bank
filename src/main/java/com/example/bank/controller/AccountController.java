@@ -51,8 +51,8 @@ public class AccountController {
                                              @RequestHeader(USERNAME_HEADER) String username,
                                              @Valid @RequestBody DebitRequest request) {
         accountService.validateOwnership(accountNumber, username);
-        accountService.debitAccount(accountNumber, request);
         externalLoggingService.logDebit();
+        accountService.debitAccount(accountNumber, request);
         return ResponseEntity.noContent().build();
     }
 

@@ -75,6 +75,20 @@ class AccountControllerTest {
     }
 
     @Test
+    void creditRejectsReferenceIdThatMatchesRegexButCannotBeParsedAsUuid() throws Exception {
+        mockMvc.perform(post("/accounts/ACC-12345678/credit")
+                        .header("X-Username", USERNAME)
+                        .contentType("application/json")
+                        .content("""
+                                {"amount":10,"currency":"EUR","referenceId":"11111111-1111-1111-1111-11111111111-"}
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.referenceId").value("Invalid UUID format"));
+
+        verifyNoInteractions(accountService);
+    }
+
+    @Test
     void balanceMapsOwnershipFailureToForbidden() throws Exception {
         doThrow(new ResponseStatusException(HttpStatus.FORBIDDEN, "You do not own this account"))
                 .when(accountService).validateOwnership(ACCOUNT_NUMBER, "bob");
@@ -101,7 +115,7 @@ class AccountControllerTest {
     }
 
     @Test
-    void debitLogsExternallyAfterAccountServiceDebitSucceeds() throws Exception {
+    void debitLogsExternallyBeforeAccountServiceDebit() throws Exception {
         mockMvc.perform(post("/accounts/{accountNumber}/debit", ACCOUNT_NUMBER)
                         .header("X-Username", USERNAME)
                         .contentType("application/json")
@@ -112,12 +126,12 @@ class AccountControllerTest {
 
         InOrder inOrder = inOrder(accountService, externalLoggingService);
         inOrder.verify(accountService).validateOwnership(ACCOUNT_NUMBER, USERNAME);
-        inOrder.verify(accountService).debitAccount(eq(ACCOUNT_NUMBER), any());
         inOrder.verify(externalLoggingService).logDebit();
+        inOrder.verify(accountService).debitAccount(eq(ACCOUNT_NUMBER), any());
     }
 
     @Test
-    void debitDoesNotLogExternallyWhenAccountServiceDebitFails() throws Exception {
+    void debitLogsExternallyWhenAccountServiceDebitFails() throws Exception {
         doThrow(new ApplicationException("Insufficient funds", HttpStatus.UNPROCESSABLE_ENTITY))
                 .when(accountService).debitAccount(eq(ACCOUNT_NUMBER), any());
 
@@ -130,7 +144,7 @@ class AccountControllerTest {
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.error").value("Insufficient funds"));
 
-        verifyNoInteractions(externalLoggingService);
+        verify(externalLoggingService).logDebit();
     }
 
     @Test
