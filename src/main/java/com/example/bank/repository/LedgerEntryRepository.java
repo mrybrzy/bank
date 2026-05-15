@@ -17,7 +17,7 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
                 END
             ), 0)
             FROM LedgerEntry le
-            WHERE le.accountId = :accountId
+            WHERE le.account.id = :accountId
             AND le.currency = :currency
             """)
     BigDecimal sumAmountByAccountIdAndCurrency(
@@ -34,7 +34,7 @@ public interface LedgerEntryRepository extends JpaRepository<LedgerEntry, Long> 
                   END
               ), 0)
        FROM LedgerEntry le
-       WHERE le.accountId = :accountId
+       WHERE le.account.id = :accountId
        GROUP BY le.currency
        """)
     List<Object[]> sumAmountByAccountId(@Param("accountId") Long accountId);

@@ -3,6 +3,7 @@ package com.example.bank.service;
 import com.example.bank.dto.CreditRequest;
 import com.example.bank.dto.DebitRequest;
 import com.example.bank.dto.ExchangeRequest;
+import com.example.bank.entity.Account;
 import com.example.bank.entity.BankOperation;
 import com.example.bank.entity.LedgerEntry;
 import com.example.bank.exception.ApplicationException;
@@ -27,20 +28,20 @@ public class LedgerService {
     private final BankOperationRepository bankOperationRepository;
 
 
-    public void credit(Long accountId, CreditRequest request) {
+    public void credit(Account account, CreditRequest request) {
         validatePositiveAmount(request.getAmount());
         registerOperation(request.getReferenceId(), BankOperation.OperationType.CREDIT);
-        createCreditEntry(accountId, request.getCurrency(), request.getAmount(), request.getReferenceId());
+        createCreditEntry(account, request.getCurrency(), request.getAmount(), request.getReferenceId());
     }
 
-    public void debit(Long accountId, DebitRequest request) {
+    public void debit(Account account, DebitRequest request) {
         validatePositiveAmount(request.getAmount());
-        boolean hasSufficientFunds = getBalance(accountId, request.getCurrency()).compareTo(request.getAmount()) >= 0;
+        boolean hasSufficientFunds = getBalance(account.getId(), request.getCurrency()).compareTo(request.getAmount()) >= 0;
         if (!hasSufficientFunds) {
             throw new ApplicationException("Insufficient funds", HttpStatus.UNPROCESSABLE_ENTITY);
         }
         registerOperation(request.getReferenceId(), BankOperation.OperationType.DEBIT);
-        createDebitEntry(accountId, request.getCurrency(), request.getAmount(), request.getReferenceId());
+        createDebitEntry(account, request.getCurrency(), request.getAmount(), request.getReferenceId());
     }
 
     public BigDecimal getBalance(Long accountId, String currency) {
@@ -58,16 +59,16 @@ public class LedgerService {
                 ));
     }
 
-    public void exchangeCurrency(Long accountId, ExchangeRequest request, BigDecimal convertedAmount) {
+    public void exchangeCurrency(Account account, ExchangeRequest request, BigDecimal convertedAmount) {
         validatePositiveAmount(request.getAmount());
-        boolean hasSufficientFunds = getBalance(accountId, request.getFromCurrency()).compareTo(request.getAmount()) >= 0;
+        boolean hasSufficientFunds = getBalance(account.getId(), request.getFromCurrency()).compareTo(request.getAmount()) >= 0;
 
         if (!hasSufficientFunds) {
             throw new ApplicationException("Insufficient funds", HttpStatus.UNPROCESSABLE_ENTITY);
         }
-        createDebitEntry(accountId, request.getFromCurrency(), request.getAmount(), request.getReferenceId());
+        createDebitEntry(account, request.getFromCurrency(), request.getAmount(), request.getReferenceId());
         registerOperation(request.getReferenceId(), BankOperation.OperationType.EXCHANGE);
-        createCreditEntry(accountId, request.getToCurrency(), convertedAmount, request.getReferenceId());
+        createCreditEntry(account, request.getToCurrency(), convertedAmount, request.getReferenceId());
     }
 
     private void validatePositiveAmount(BigDecimal amount) {
@@ -88,9 +89,9 @@ public class LedgerService {
         }
     }
 
-    private void createCreditEntry(Long accountId, String currency, BigDecimal amount, String referenceId) {
+    private void createCreditEntry(Account account, String currency, BigDecimal amount, String referenceId) {
         LedgerEntry entry = new LedgerEntry();
-        entry.setAccountId(accountId);
+        entry.setAccount(account);
         entry.setAmount(amount);
         entry.setCurrency(currency);
         entry.setReferenceId(referenceId);
@@ -98,9 +99,9 @@ public class LedgerService {
         ledgerEntryRepository.save(entry);
     }
 
-    private void createDebitEntry(Long accountId, String currency, BigDecimal amount, String referenceId) {
+    private void createDebitEntry(Account account, String currency, BigDecimal amount, String referenceId) {
         LedgerEntry entry = new LedgerEntry();
-        entry.setAccountId(accountId);
+        entry.setAccount(account);
         entry.setAmount(amount);
         entry.setCurrency(currency);
         entry.setReferenceId(referenceId);
