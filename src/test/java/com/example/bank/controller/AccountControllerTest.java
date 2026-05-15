@@ -22,6 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -117,7 +118,7 @@ class AccountControllerTest {
     }
 
     @Test
-    void debitLogsExternallyWhenAccountServiceDebitFails() throws Exception {
+    void debitLogsAttemptEvenWhenDebitOperationFails() throws Exception {
         doThrow(new ApplicationException("Insufficient funds", HttpStatus.UNPROCESSABLE_ENTITY))
                 .when(accountService).debitAccount(eq(ACCOUNT_NUMBER), any());
 
@@ -131,6 +132,24 @@ class AccountControllerTest {
                 .andExpect(jsonPath("$.error").value("Insufficient funds"));
 
         verify(externalLoggingService).logDebit();
+    }
+
+    @Test
+    void debitOperationIsNotAttemptedWhenExternalLoggingFails() throws Exception {
+        doThrow(new ApplicationException("External logging failed", HttpStatus.BAD_GATEWAY))
+                .when(externalLoggingService).logDebit();
+
+        mockMvc.perform(post("/accounts/{accountNumber}/debit", ACCOUNT_NUMBER)
+                        .header("X-Username", USERNAME)
+                        .contentType("application/json")
+                        .content("""
+                                {"amount":10,"currency":"EUR","referenceId":"11111111-1111-1111-1111-111111111111"}
+                                """))
+                .andExpect(status().isBadGateway())
+                .andExpect(jsonPath("$.error").value("External logging failed"));
+
+        verify(accountService).validateOwnership(ACCOUNT_NUMBER, USERNAME);
+        verify(accountService, never()).debitAccount(eq(ACCOUNT_NUMBER), any());
     }
 
     @Test

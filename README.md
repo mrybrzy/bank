@@ -104,7 +104,7 @@ Response: `204 No Content`
 
 `POST /accounts/{accountNumber}/debit`
 
-Debits money from one currency balance. The debit does not use other currencies and does not exchange money automatically. External logging is called only after the debit service call succeeds.
+Debits money from one currency balance. The debit does not use other currencies and does not exchange money automatically. External logging is called before debiting and does not depend on debit operation success. In case logging fails, the debit operation is not attempted.
 
 Header:
 
